@@ -84,13 +84,7 @@ void setup(void) {
   tft.fillScreen(RED);
   
 Serial.print("Initializing net...");
-//
-//  if (!SD.begin(SD_CS)) {
-//    Serial.println("failed!");
-//    return;
-//  }
-//  Serial.println("SD OK!");
-//  
+
     WiFly.begin();
   
   if (!WiFly.join(ssid, passphrase)) {
@@ -121,21 +115,15 @@ Serial.print("Initializing net...");
   
 Serial.print("display file...");
   bmpdraw(bmpFile, 0, 0);
+  
+  Serial.print("display text");
+  tft.setRotation(2);
+  tft.drawString(25, 140, "Electric Squid!", CYAN, 1);
+  while (1) ;
 }
 
 void loop() {
 }
-
-
-//void testfastlines(uint16_t color1, uint16_t color2) {
-//   tft.fillScreen(BLACK);
-//   for (uint16_t y=0; y < tft.height(); y+=5) {
-//     tft.drawHorizontalLine(0, y, tft.width(), color1);
-//   }
-//   for (uint16_t x=0; x < tft.width(); x+=5) {
-//     tft.drawVerticalLine(x, 0, tft.height(), color2);
-//   }
-//}
 
 /*********************************************/
 // This procedure reads a bitmap and draws it to the screen
@@ -144,7 +132,7 @@ void loop() {
 // more RAM but makes the drawing a little faster. 20 pixels' worth
 // is probably a good place
 
-#define BUFFPIXEL 20
+#define BUFFPIXEL 60
 
 void bmpdraw(NetworkFile f, int x, int y) {
   bmpFile.seek(bmpImageoffset);
