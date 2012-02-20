@@ -6,7 +6,6 @@ class NetworkFile {
     uint32_t offset;
     Client *client;
     
-    uint16_t checkHeader();
   public:
     NetworkFile() { offset = 0; client = NULL; }
     void seek(uint32_t offset);
@@ -15,4 +14,5 @@ class NetworkFile {
     static NetworkFile &open(const char *server, const char *fileName, const uint16_t port = 80);
     operator bool() { return client != NULL; }
     uint32_t getOffset() const { return offset; }
+    void close() { client->stop(); client = NULL; }
 };

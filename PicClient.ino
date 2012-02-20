@@ -16,12 +16,13 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
-#include "WiFly.h"
+#include <WiFly.h>
 #include <Adafruit_ST7735.h>
 //#include <SD.h>
 #include <SPI.h>
 #include "NetworkFile.h"
 #include "Credentials.h"
+#include "NetUtil.h"
 
 // If we are using the hardware SPI interface, these are the pins (for future ref)
 #define sclk 13 
@@ -48,6 +49,9 @@
 #define YELLOW          0xFFE0  
 #define WHITE           0xFFFF
 
+#define PHP_SERVER "192.168.0.108"
+#define PHP_PORT 80
+#define PHP_PATH "/~rmd/feed.php"
 
 // to draw images from the SD card, we will share the hardware SPI interface
 //Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst);  
@@ -83,9 +87,9 @@ void setup(void) {
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(RED);
   
-Serial.print("Initializing net...");
+  Serial.print("Initializing net...");
 
-    WiFly.begin();
+  WiFly.begin();
   
   if (!WiFly.join(ssid, passphrase)) {
     Serial.println("Association failed.");
@@ -93,16 +97,60 @@ Serial.print("Initializing net...");
       // Hang on failure.
     }
   }  
-  WiFly.configure(WIFLY_BAUD, 115200);
+  WiFly.configure(WIFLY_BAUD, 57600);
+  Serial.println("Init Complete");
 }
 
 void loop() {
-  Serial.print("Initializing file...");
-  bmpFile = NetworkFile::open("192.168.0.108", "/~rmd/squid.bmp");
+  char *url;
+  char *text;
+  
+  Serial.println("connecting...");
+  Client client(PHP_SERVER, PHP_PORT);
+  if (client.connect()) {
+    client.flush();
+    Serial.println("connected");
+    client.print("GET "); client.print(PHP_PATH); client.println(" HTTP/1.0");
+    client.println();
+  }
+  uint16_t contentLength = 0;
+  if (checkHeader(client, &contentLength) != 200) {
+    Serial.println("Failed to get next message");
+    return;
+  }
+  Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
+  delay(100);
+  char xmlBuf[contentLength+1];
+  uint16_t rSize = cRead(&client, xmlBuf, contentLength);
+  if (rSize < contentLength) {
+    Serial.print("Warning: read length "); Serial.print(rSize); 
+    Serial.print(" < content length "); Serial.println(contentLength);
+  }
+  //Serial.print("read "); Serial.print(rSize); Serial.println(" bytes");
+  xmlBuf[rSize] = 0;
+  url = strstr(xmlBuf, "<image>");
+  if (url) {
+    url += 7;
+  }
+  text = strstr(xmlBuf, "<text>");
+  if (text) {
+    text += 6;
+  }
+  char *q = strstr(url, "</image>");
+  *q = 0;
+  q = strstr(text, "</text>");
+  *q = 0;
+  client.stop();
+  
+  Serial.print("image "); Serial.println(url);
+  Serial.print("text "); Serial.println(text);
+  
+  //Serial.print("Initializing file...");
+  bmpFile = NetworkFile::open(PHP_SERVER, url);
 
   if (! bmpFile) {
     Serial.println("didnt find image");
-    while (1);
+    return;
   }
   
   if (! bmpReadHeader(bmpFile)) { 
@@ -110,17 +158,22 @@ void loop() {
      return;
   }
   
+  tft.fillScreen(RED);
+  
   Serial.print("image size "); 
   Serial.print(bmpWidth, DEC);
   Serial.print(", ");
   Serial.println(bmpHeight, DEC);
   
-Serial.print("display file...");
   bmpdraw(bmpFile, 0, 0);
   
-  Serial.print("display text");
   tft.setRotation(2);
-  tft.drawString(25, 140, "Electric Squid!", ((0x33 & 0xF8) << 8 | (0xE0 & 0xFC) << 2 | (0xFF & 0xF8) >> 3));
+  tft.drawString(25, 140, text, ((0x33 & 0xF8) << 8 | (0xE0 & 0xFC) << 2 | (0xFF & 0xF8) >> 3));
+  
+  bmpFile.close();
+  
+  // 10 seconds to the next one
+  delay(10000);
 }
 
 /*********************************************/
@@ -197,17 +250,17 @@ boolean bmpReadHeader(NetworkFile &f) {
  
   // read file size
   tmp = read32(f);  
-  Serial.print("size 0x"); Serial.println(tmp, HEX);
+  //Serial.print("size 0x"); Serial.println(tmp, HEX);
   
   // read and ignore creator bytes
   read32(f);
   
   bmpImageoffset = read32(f);  
-  Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
+  //Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
   
   // read DIB header
   tmp = read32(f);
-  Serial.print("header size "); Serial.println(tmp, DEC);
+  //Serial.print("header size "); Serial.println(tmp, DEC);
   bmpWidth = read32(f);
   bmpHeight = read32(f);
 
@@ -216,7 +269,7 @@ boolean bmpReadHeader(NetworkFile &f) {
     return false;
     
   bmpDepth = read16(f);
-  Serial.print("bitdepth "); Serial.println(bmpDepth, DEC);
+  //Serial.print("bitdepth "); Serial.println(bmpDepth, DEC);
 
   tmp = read32(f);
   if (tmp != 0) {
@@ -224,7 +277,7 @@ boolean bmpReadHeader(NetworkFile &f) {
     return false;
   }
   
-  Serial.print("compression "); Serial.println(tmp, DEC);
+  //Serial.print("compression "); Serial.println(tmp, DEC);
 
   return true;
 }
