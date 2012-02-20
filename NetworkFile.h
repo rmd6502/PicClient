@@ -14,4 +14,5 @@ class NetworkFile {
     uint8_t read() { uint8_t ret; read(&ret, 1); return ret; }
     static NetworkFile &open(const char *server, const char *fileName, const uint16_t port = 80);
     operator bool() { return client != NULL; }
+    uint32_t getOffset() const { return offset; }
 };

@@ -6,6 +6,7 @@ void NetworkFile::seek(uint32_t new_offset) {
     // Can't seek backwards, silently fail
     return;
   }
+  Serial.print("offset "); Serial.print(offset); Serial.print(" new_offset "); Serial.println(new_offset);
   while (offset < new_offset) read();
 }
 
@@ -18,6 +19,7 @@ uint16_t NetworkFile::read(void *buf, uint16_t count) {
       break;
     }
     while (client->connected() && !client->available()) ;   // wait
+    if (!client->connected()) { client = NULL; break; }
     ((uint8_t *)buf)[bufPtr] = client->read();
     bufPtr = bufPtr + 1;
     offset = offset + 1;

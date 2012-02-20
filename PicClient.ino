@@ -118,7 +118,7 @@ Serial.print("display file...");
   
   Serial.print("display text");
   tft.setRotation(2);
-  tft.drawString(25, 140, "Electric Squid!", CYAN, 1);
+  tft.drawString(25, 140, "Electric Squid!", ((0x33 & 0xF8) << 8 | (0xE0 & 0xFC) << 2 | (0xFF & 0xF8) >> 3));
   while (1) ;
 }
 
@@ -134,7 +134,7 @@ void loop() {
 
 #define BUFFPIXEL 60
 
-void bmpdraw(NetworkFile f, int x, int y) {
+void bmpdraw(NetworkFile &f, int x, int y) {
   bmpFile.seek(bmpImageoffset);
   
   uint32_t time = millis();
@@ -164,9 +164,9 @@ void bmpdraw(NetworkFile f, int x, int y) {
       }
       
       // convert pixel from 888 to 565
+      b = sdbuffer[buffidx++];     // blue
       g = sdbuffer[buffidx++];     // green
       p = sdbuffer[buffidx++];     // red
-      b = sdbuffer[buffidx++];     // blue
       
       p >>= 3;
       p <<= 6;
@@ -188,7 +188,7 @@ void bmpdraw(NetworkFile f, int x, int y) {
   Serial.println(" ms");
 }
 
-boolean bmpReadHeader(NetworkFile f) {
+boolean bmpReadHeader(NetworkFile &f) {
    // read header
   uint32_t tmp;
   
@@ -237,7 +237,7 @@ boolean bmpReadHeader(NetworkFile f) {
 // (the data is stored in little endian format!)
 
 // LITTLE ENDIAN!
-uint16_t read16(NetworkFile f) {
+uint16_t read16(NetworkFile &f) {
   uint16_t d;
   uint8_t b;
   b = f.read();
@@ -249,7 +249,7 @@ uint16_t read16(NetworkFile f) {
 
 
 // LITTLE ENDIAN!
-uint32_t read32(NetworkFile f) {
+uint32_t read32(NetworkFile &f) {
   uint32_t d;
   uint16_t b;
  
