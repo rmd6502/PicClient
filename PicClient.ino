@@ -94,7 +94,9 @@ Serial.print("Initializing net...");
     }
   }  
   WiFly.configure(WIFLY_BAUD, 115200);
-  
+}
+
+void loop() {
   Serial.print("Initializing file...");
   bmpFile = NetworkFile::open("192.168.0.108", "/~rmd/squid.bmp");
 
@@ -119,10 +121,6 @@ Serial.print("display file...");
   Serial.print("display text");
   tft.setRotation(2);
   tft.drawString(25, 140, "Electric Squid!", ((0x33 & 0xF8) << 8 | (0xE0 & 0xFC) << 2 | (0xFF & 0xF8) >> 3));
-  while (1) ;
-}
-
-void loop() {
 }
 
 /*********************************************/
