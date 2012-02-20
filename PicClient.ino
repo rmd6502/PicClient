@@ -69,6 +69,8 @@ void setup(void) {
   
   pinMode(cs, OUTPUT);
   digitalWrite(cs, HIGH);
+  
+  SPI.setClockDivider(SPI_CLOCK_DIV2);
      
   // Our supplier changed the 1.8" display slightly after Jan 10, 2012
   // so that the alignment of the TFT had to be shifted by a few pixels
@@ -87,7 +89,7 @@ void setup(void) {
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(BLUE);
   
-  Serial.print("Initializing net...");
+  Serial.print("Init net...");
 
   WiFly.begin();
   
@@ -97,8 +99,8 @@ void setup(void) {
       // Hang on failure.
     }
   }  
-  WiFly.configure(WIFLY_BAUD, 230400);
-  Serial.println("Init Complete");
+  WiFly.configure(WIFLY_BAUD, 921600);
+  Serial.println("Init f");
 }
 
 void loop() {
@@ -118,8 +120,10 @@ void loop() {
     Serial.println("Failed to get next message");
     return;
   }
+  Serial.print("client at "); Serial.println((uint32_t )&client, HEX);
   Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
   delay(100);
+  if (contentLength > 200) contentLength = 200;
   char xmlBuf[contentLength+1];
   uint16_t rSize = cRead(&client, xmlBuf, contentLength);
   if (rSize < contentLength) {
@@ -149,22 +153,24 @@ void loop() {
   bmpFile = NetworkFile::open(PHP_SERVER, url);
 
   if (! bmpFile) {
-    Serial.println("didnt find image");
+    Serial.println("f1");
+    bmpFile.close();
     return;
   }
   
   if (! bmpReadHeader(bmpFile)) { 
-     Serial.println("bad bmp");
+     Serial.println("f2");
+     bmpFile.close();
      return;
   }
   
   tft.fillScreen(RED);
   
-  Serial.print("image size "); 
-  Serial.print(bmpWidth, DEC);
-  Serial.print(", ");
-  Serial.println(bmpHeight, DEC);
-  
+//  Serial.print("image size "); 
+//  Serial.print(bmpWidth, DEC);
+//  Serial.print(", ");
+//  Serial.println(bmpHeight, DEC);
+  tft.setRotation(0);
   bmpdraw(bmpFile, 0, 0);
   
   tft.setRotation(2);
@@ -235,8 +241,8 @@ void bmpdraw(NetworkFile &f, int x, int y) {
     }
     //Serial.println();
   }
-  Serial.print(millis() - time, DEC);
-  Serial.println(" ms");
+  //Serial.print(millis() - time, DEC);
+  //Serial.println(" ms");
 }
 
 boolean bmpReadHeader(NetworkFile &f) {
@@ -273,7 +279,8 @@ boolean bmpReadHeader(NetworkFile &f) {
 
   tmp = read32(f);
   if (tmp != 0) {
-    Serial.println("compressed images not supported");
+    //Serial.print(tmp);
+    Serial.println("f4");
     return false;
   }
   

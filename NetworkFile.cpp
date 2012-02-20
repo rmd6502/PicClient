@@ -21,25 +21,30 @@ uint16_t NetworkFile::read(void *buf, uint16_t count) {
 
 NetworkFile &NetworkFile::open(const char *server, const char *fileName, const uint16_t port) {
   static NetworkFile instance;
+  
+  if (instance) {
+    instance.close();
+  }
   static Client myClient(server, port);
   
   instance.client = &myClient; instance.offset = 0;
   if (myClient.connect()) {
-    Serial.println("connected");
+    Serial.print("connected, filename "); Serial.println(fileName);
     myClient.print("GET "); myClient.print(fileName); myClient.println(" HTTP/1.0");
     myClient.println();
     Serial.println("about to check header");
-    if (checkHeader(myClient) != 200) {
-      myClient.stop();
-      instance.client = NULL;
+    uint16_t len;
+    uint16_t ret = checkHeader(myClient, &len);
+    if (ret != 200) {
+      Serial.print("failed, ret "); Serial.println(ret);
+      instance.close();
     }
     instance.offset = 0;
-    Serial.println("return from check header");
+    Serial.print("return from check header ");Serial.println(len);
   } else {
     Serial.println("connection failed");
     // indicate we're not really open
-    myClient.stop();
-    instance.client = NULL;
+    instance.close();
   }
   return instance;
 }
