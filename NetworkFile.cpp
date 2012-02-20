@@ -30,7 +30,7 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
     myClient.println();
     Serial.println("about to check header");
     if (checkHeader(myClient) != 200) {
-      instance.client->stop();
+      myClient.stop();
       instance.client = NULL;
     }
     instance.offset = 0;
@@ -38,7 +38,7 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
   } else {
     Serial.println("connection failed");
     // indicate we're not really open
-    instance.client.stop();
+    myClient.stop();
     instance.client = NULL;
   }
   return instance;

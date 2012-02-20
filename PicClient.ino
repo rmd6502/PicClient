@@ -85,7 +85,7 @@ void setup(void) {
 
   // Just do a simple test
   tft.writecommand(ST7735_DISPON);
-  tft.fillScreen(RED);
+  tft.fillScreen(BLUE);
   
   Serial.print("Initializing net...");
 
@@ -97,7 +97,7 @@ void setup(void) {
       // Hang on failure.
     }
   }  
-  WiFly.configure(WIFLY_BAUD, 57600);
+  WiFly.configure(WIFLY_BAUD, 230400);
   Serial.println("Init Complete");
 }
 
