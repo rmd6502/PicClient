@@ -81,7 +81,7 @@ void setup(void) {
 
   // Just do a simple test
   tft.writecommand(ST7735_DISPON);
-  tft.fillScreen(BLACK);
+  tft.fillScreen(RED);
   
 Serial.print("Initializing net...");
 //
@@ -176,9 +176,9 @@ void bmpdraw(NetworkFile f, int x, int y) {
       }
       
       // convert pixel from 888 to 565
-      b = sdbuffer[buffidx++];     // blue
       g = sdbuffer[buffidx++];     // green
       p = sdbuffer[buffidx++];     // red
+      b = sdbuffer[buffidx++];     // blue
       
       p >>= 3;
       p <<= 6;
