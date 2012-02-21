@@ -4,6 +4,9 @@
 		try {
 			$img = new Imagick($image);
 			if ($img->valid()) {
+                if ($img->getImageWidth() > $img->getImageHeight()) {
+                    $img->rotateImage(new ImagickPixel('none'), 90);
+                }
 				$img->thumbnailImage(0, 160);
 				if ($img->getImageWidth() > 128) {
 					$img->thumbnailImage(128, 0);
@@ -12,6 +15,7 @@
 				$img->setCompression(imagick::COMPRESSION_NO);
 				$img->setImageDepth(24);
                 $img->setImageMatte(false);
+                $img->flopImage();
 				//$img->setImageAlphaChannel(imagick::ALPHACHANNEL_DEACTIVATE);
                 $imgData = (string)$img;
 	
