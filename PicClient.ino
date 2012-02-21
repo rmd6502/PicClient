@@ -1,4 +1,12 @@
 /*************************************************** 
+  Display images from a slideshow feed on an Adafruit
+  1.8" SPI display.  Use a WiFly shield to make the 
+  network connection.
+
+  Modified my Robert M. Diamond in February 2012.
+
+  Lady Ada's license text follows...
+
   This is an example sketch for the Adafruit 1.8" SPI display.
   This library works with the Adafruit 1.8" TFT Breakout w/SD card  
   ----> http://www.adafruit.com/products/358  
@@ -211,12 +219,16 @@ void bmpdraw(NetworkFile &f, int x, int y) {
   //tft.setRotation();
   
   for (i=0; i< bmpHeight; i++) {
+    if (! bmpFile) break;
     // bitmaps are stored with the BOTTOM line first so we have to move 'up'
   
     for (j=0; j<bmpWidth; j++) {
       // read more pixels
       if (buffidx >= 3*BUFFPIXEL) {
-        bmpFile.read(sdbuffer, 3*BUFFPIXEL);
+        if (bmpFile.read(sdbuffer, 3*BUFFPIXEL) == 0) {
+            bmpFile.close();
+            break;
+        }
         buffidx = 0;
       }
       
@@ -239,6 +251,8 @@ void bmpdraw(NetworkFile &f, int x, int y) {
       //tft.drawPixel(i, j, p);
       tft.pushColor(p);
     }
+    // Skip to the next multiple of 4 bytes, per the BMP spec
+    while ((bmpFile.getOffset() & 3) && bmpFile.read(&dummy, 1) ;
     //Serial.println();
   }
   //Serial.print(millis() - time, DEC);
