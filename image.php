@@ -11,15 +11,18 @@
 				$img->setImageFormat('bmp');
 				$img->setCompression(imagick::COMPRESSION_NO);
 				$img->setImageDepth(24);
+                $img->setImageMatte(false);
 				//$img->setImageAlphaChannel(imagick::ALPHACHANNEL_DEACTIVATE);
+                $imgData = (string)$img;
 	
-				header("Content-type: image/bmp");
+				header("Content-Type: image/bmp");
+				header("Content-Length: ".strlen($imgData));
 				echo $img;
 			} else {
 				throw new Exception("image not valid");
 			}
 		} catch (Exception $e) {
-			http_response_code(403);
+			//http_response_code(403);
 			echo $e;
 		}
 	}
