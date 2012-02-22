@@ -11,6 +11,8 @@ uint16_t checkHeader(Client &client, uint16_t *contentLength) {
   bool done = false;  // when we read the blank line or error
   uint16_t ret = 401;  // not found
   
+  if (contentLength) *contentLength = 0;
+  
   //Serial.print("__bss_end 0x");Serial.println(__bss_end,HEX);
   if (client == NULL) {
     Serial.println("Client is NULL!!"); return ret;

@@ -262,11 +262,11 @@ boolean bmpReadHeader(NetworkFile &f) {
   read32(f);
   
   bmpImageoffset = read32(f);  
-  //Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
+  Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
   
   // read DIB header
   tmp = read32(f);
-  //Serial.print("header size "); Serial.println(tmp, DEC);
+  Serial.print("header size "); Serial.println(tmp, DEC);
   bmpWidth = read32(f);
   bmpHeight = read32(f);
 
