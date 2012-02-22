@@ -29,18 +29,18 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
   
   instance.client = &myClient; instance.offset = 0;
   if (myClient.connect()) {
-    Serial.print("connected, filename "); Serial.println(fileName);
+    //Serial.print("connected, filename "); Serial.println(fileName);
     myClient.print("GET "); myClient.print(fileName); myClient.println(" HTTP/1.0");
     myClient.println();
-    Serial.println("about to check header");
+    Serial.println("check header");
     uint16_t len;
     uint16_t ret = checkHeader(myClient, &len);
     if (ret != 200) {
-      Serial.print("failed, ret "); Serial.println(ret);
+      Serial.print("fail, ret "); Serial.println(ret);
       instance.close();
     }
     instance.offset = 0;
-    Serial.print("return from check header ");Serial.println(len);
+    //Serial.print("return from check header ");Serial.println(len);
   } else {
     Serial.println("connection failed");
     // indicate we're not really open

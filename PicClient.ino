@@ -115,17 +115,17 @@ void loop() {
   char *url;
   char *text;
   
-  Serial.println("connecting...");
+  Serial.println("conn...");
   Client client(PHP_SERVER, PHP_PORT);
   if (client.connect()) {
     client.flush();
-    Serial.println("connected");
+    Serial.println("conn");
     client.print("GET "); client.print(PHP_PATH); client.println(" HTTP/1.0");
     client.println();
   }
   uint16_t contentLength = 0;
   if (checkHeader(client, &contentLength) != 200) {
-    Serial.println("Failed to get next message");
+    Serial.println("checkheader fail");
     return;
   }
   Serial.print("client at "); Serial.println((uint32_t )&client, HEX);
@@ -197,12 +197,11 @@ void loop() {
 // more RAM but makes the drawing a little faster. 20 pixels' worth
 // is probably a good place
 
-#define BUFFPIXEL 60
+#define BUFFPIXEL 50
 
 void bmpdraw(NetworkFile &f, int x, int y) {
   bmpFile.seek(bmpImageoffset);
-  
-  uint32_t time = millis();
+  int ff;
   uint16_t p; 
   uint8_t g, b;
   int i, j;
@@ -229,7 +228,7 @@ void bmpdraw(NetworkFile &f, int x, int y) {
             bmpFile.close();
             break;
         }
-        buffidx = 0;
+        buffidx -= 3 * BUFFPIXEL;
       }
       
       // convert pixel from 888 to 565
@@ -251,8 +250,11 @@ void bmpdraw(NetworkFile &f, int x, int y) {
       //tft.drawPixel(i, j, p);
       tft.pushColor(p);
     }
-    // Skip to the next multiple of 4 bytes, per the BMP spec
-    while ((bmpFile.getOffset() & 3) && bmpFile.read(&dummy, 1) ;
+    ff = (bmpWidth * 3) & 3;
+    if (ff) {
+      buffidx -= ff;
+      buffidx += 4;
+    }
     //Serial.println();
   }
   //Serial.print(millis() - time, DEC);
@@ -276,14 +278,14 @@ boolean bmpReadHeader(NetworkFile &f) {
   read32(f);
   
   bmpImageoffset = read32(f);  
-  Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
+  //Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
   
   // read DIB header
   tmp = read32(f);
-  Serial.print("header size "); Serial.println(tmp, DEC);
+  //Serial.print("header size "); Serial.println(tmp, DEC);
   bmpWidth = read32(f);
   bmpHeight = read32(f);
-
+  Serial.print(bmpWidth); Serial.print("x"); Serial.println(bmpHeight);
   
   if (read16(f) != 1)
     return false;
