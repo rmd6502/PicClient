@@ -128,8 +128,7 @@ void loop() {
     Serial.println("checkheader fail");
     return;
   }
-  Serial.print("client at "); Serial.println((uint32_t )&client, HEX);
-  Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
+  //Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
   delay(100);
   if (contentLength > 200) contentLength = 200;
   char xmlBuf[contentLength+1];

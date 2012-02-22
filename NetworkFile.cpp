@@ -7,7 +7,7 @@ void NetworkFile::seek(uint32_t new_offset) {
     // Can't seek backwards, silently fail
     return;
   }
-  Serial.print("offset "); Serial.print(offset); Serial.print(" new_offset "); Serial.println(new_offset);
+  //Serial.print("offset "); Serial.print(offset); Serial.print(" new_offset "); Serial.println(new_offset);
   while (offset < new_offset) read();
 }
 
@@ -32,7 +32,7 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
     //Serial.print("connected, filename "); Serial.println(fileName);
     myClient.print("GET "); myClient.print(fileName); myClient.println(" HTTP/1.0");
     myClient.println();
-    Serial.println("check header");
+    //Serial.println("check header");
     uint16_t len;
     uint16_t ret = checkHeader(myClient, &len);
     if (ret != 200) {
@@ -42,7 +42,7 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
     instance.offset = 0;
     //Serial.print("return from check header ");Serial.println(len);
   } else {
-    Serial.println("connection failed");
+    Serial.println("open failed");
     // indicate we're not really open
     instance.close();
   }
