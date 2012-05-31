@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <WiFly.h>
+#include <Ethernet.h>
 #include "NetUtil.h"
 
 extern uint16_t __bss_end;
@@ -15,7 +15,7 @@ uint16_t checkHeader(Client &client, uint16_t *contentLength) {
   
   //Serial.print("__bss_end 0x");Serial.println(__bss_end,HEX);
   if (client == NULL) {
-    Serial.println("Client is NULL!!"); return ret;
+    Serial.println("Client NULL!!"); return ret;
   }
   // read until \r\n\r\n then check header values
   while (!done) {

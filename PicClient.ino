@@ -1,9 +1,12 @@
+#include <SoftwareSerial.h>
+
 /*************************************************** 
   Display images from a slideshow feed on an Adafruit
-  1.8" SPI display.  Use a WiFly shield to make the 
+  1.8" SPI display.  Use an Ethernet shield to make the 
   network connection.
 
-  Modified my Robert M. Diamond in February 2012.
+  Modified by Robert M. Diamond in February 2012.
+  Re-Modified May 31, 2012 for Cassandra Nguyen and Protestbot.
 
   Lady Ada's license text follows...
 
@@ -24,7 +27,7 @@
   MIT license, all text above must be included in any redistribution
  ****************************************************/
 
-#include <WiFly.h>
+#include <Ethernet.h>
 #include <Adafruit_ST7735.h>
 //#include <SD.h>
 #include <SPI.h>
@@ -33,6 +36,7 @@
 #include "NetUtil.h"
 
 // If we are using the hardware SPI interface, these are the pins (for future ref)
+#ifdef __ATMEGA328__
 #define sclk 13 
 #define mosi 11
 //#define sclk 4
@@ -46,6 +50,22 @@
 // these pins are required
 #define cs 7
 #define dc 9
+#else
+#define sclk 52
+#define mosi 51
+//#define sclk 4
+//#define mosi 5
+//#define cs 6
+//#define dc 7
+#define rst 8  // you can al
+// You can also just connect the reset pin to +5V (we do a software reset)
+//#define rst 8
+
+// these pins are required
+#define cs 4
+#define dc 9
+#endif
+SoftwareSerial ss(5,6);
 
 // Color definitions
 #define	BLACK           0x0000
@@ -57,13 +77,14 @@
 #define YELLOW          0xFFE0  
 #define WHITE           0xFFFF
 
-#define PHP_SERVER "192.168.0.108"
+#define PHP_SERVER "protestbot.org"
 #define PHP_PORT 80
-#define PHP_PATH "/~rmd/feed.php"
+#define PHP_PATH "/test/feed.php"
 
 // to draw images from the SD card, we will share the hardware SPI interface
 //Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst);  
 Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, rst);
+byte mac[] = {  0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 // the file itself
 NetworkFile bmpFile;
@@ -72,8 +93,23 @@ NetworkFile bmpFile;
 int bmpWidth, bmpHeight;
 uint8_t bmpDepth, bmpImageoffset;
 
+// Parallax Serial LCD commands
+enum LCDCommand {
+  LCD_CLEAR = 12,
+  LCD_BACKLIGHT_ON = 17,
+  LCD_BACKLIGHT_OFF,
+  LCD_DISPLAY_OFF = 21,
+  LCD_DISPLAY_ON_NO_CURSOR_NO_BLINK,
+  LCD_DISPLAY_ON_NO_CURSOR_BLINK,
+  LCD_DISPLAY_ON_CURSOR_NO_BLINK,
+  LCD_DISPLAY_ON_CURSOR_BLINK,
+  LCD_MOVE_LINE0_COL0 = 128,
+  LCD_MOVE_LINE1_COL0 = 148
+};
+
 void setup(void) {
   Serial.begin(9600);
+  ss.begin(19200);
   
   pinMode(cs, OUTPUT);
   digitalWrite(cs, HIGH);
@@ -97,47 +133,41 @@ void setup(void) {
   tft.writecommand(ST7735_DISPON);
   tft.fillScreen(BLUE);
   
-  Serial.print("Init net...");
+  Serial.print("Init a");
 
-  WiFly.begin();
+  Ethernet.begin(mac);
   
-  if (!WiFly.join(ssid, passphrase)) {
-    Serial.println("Association failed.");
-    while (1) {
-      // Hang on failure.
-    }
-  }  
-  WiFly.configure(WIFLY_BAUD, 921600);
-  Serial.println("Init f");
+  sendLCDCommand(LCD_CLEAR);
+  sendLCDCommand(LCD_DISPLAY_ON_NO_CURSOR_NO_BLINK);
+  sendLCDCommand(LCD_DISPLAY_OFF);
 }
 
 void loop() {
   char *url;
   char *text;
   
-  Serial.println("conn...");
-  Client client(PHP_SERVER, PHP_PORT);
-  if (client.connect()) {
+  Serial.println("connecting...");
+  EthernetClient client;
+  if (client.connect(PHP_SERVER, PHP_PORT)) {
     client.flush();
-    Serial.println("conn");
     client.print("GET "); client.print(PHP_PATH); client.println(" HTTP/1.0");
     client.println();
   }
   uint16_t contentLength = 0;
   if (checkHeader(client, &contentLength) != 200) {
-    Serial.println("checkheader fail");
     return;
   }
-  //Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
+  
+  Serial.print("content length "); Serial.print(contentLength); Serial.println(" bytes");
   delay(100);
   if (contentLength > 200) contentLength = 200;
   char xmlBuf[contentLength+1];
   uint16_t rSize = cRead(&client, xmlBuf, contentLength);
   if (rSize < contentLength) {
-    Serial.print("Warning: read length "); Serial.print(rSize); 
-    Serial.print(" < content length "); Serial.println(contentLength);
+    Serial.print("Warn: read len "); Serial.print(rSize); 
+    Serial.print(" < cont len "); Serial.println(contentLength);
   }
-  //Serial.print("read "); Serial.print(rSize); Serial.println(" bytes");
+  Serial.print("read "); Serial.print(rSize); Serial.println(" bytes");
   xmlBuf[rSize] = 0;
   url = strstr(xmlBuf, "<image>");
   if (url) {
@@ -156,7 +186,12 @@ void loop() {
   Serial.print("image "); Serial.println(url);
   Serial.print("text "); Serial.println(text);
   
-  //Serial.print("Initializing file...");
+  sendLCDCommand(LCD_DISPLAY_ON_NO_CURSOR_NO_BLINK);
+  sendLCDCommand(LCD_BACKLIGHT_ON);
+  sendLCDCommand(LCD_CLEAR);
+  ss.print(text);
+
+  Serial.print("Initializing file...");
   bmpFile = NetworkFile::open(PHP_SERVER, url);
 
   if (! bmpFile) {
@@ -166,27 +201,32 @@ void loop() {
   }
   
   if (! bmpReadHeader(bmpFile)) { 
-     Serial.println("f2");
+     Serial.println("read bmp header failed");
      bmpFile.close();
      return;
   }
   
   tft.fillScreen(RED);
   
-//  Serial.print("image size "); 
-//  Serial.print(bmpWidth, DEC);
-//  Serial.print(", ");
-//  Serial.println(bmpHeight, DEC);
+  Serial.print("image size "); 
+  Serial.print(bmpWidth, DEC);
+  Serial.print(", ");
+  Serial.println(bmpHeight, DEC);
   tft.setRotation(0);
   bmpdraw(bmpFile, 0, 0);
-  
-  tft.setRotation(2);
-  tft.drawString(25, 140, text, ((0x33 & 0xF8) << 8 | (0xE0 & 0xFC) << 2 | (0xFF & 0xF8) >> 3));
-  
+    
   bmpFile.close();
   
   // 10 seconds to the next one
+  Serial.println("before delay");
   delay(10000);
+  sendLCDCommand(LCD_DISPLAY_OFF);
+  Serial.println("end loop");
+}
+
+
+void sendLCDCommand(char cmd) {
+  ss.print((char)cmd);
 }
 
 /*********************************************/
@@ -196,7 +236,7 @@ void loop() {
 // more RAM but makes the drawing a little faster. 20 pixels' worth
 // is probably a good place
 
-#define BUFFPIXEL 50
+#define BUFFPIXEL 80
 
 void bmpdraw(NetworkFile &f, int x, int y) {
   bmpFile.seek(bmpImageoffset);
@@ -204,6 +244,7 @@ void bmpdraw(NetworkFile &f, int x, int y) {
   uint16_t p; 
   uint8_t g, b;
   int i, j;
+  long time = millis();
   
   uint8_t sdbuffer[3 * BUFFPIXEL];  // 3 * pixels to buffer
   uint8_t buffidx = 3*BUFFPIXEL;
@@ -219,11 +260,13 @@ void bmpdraw(NetworkFile &f, int x, int y) {
   for (i=0; i< bmpHeight; i++) {
     if (! bmpFile) break;
     // bitmaps are stored with the BOTTOM line first so we have to move 'up'
-  
+    //Serial.print("line "); Serial.println(i);
     for (j=0; j<bmpWidth; j++) {
       // read more pixels
       if (buffidx >= 3*BUFFPIXEL) {
+        //Serial.print("buffidx "); Serial.println(buffidx);
         if (bmpFile.read(sdbuffer, 3*BUFFPIXEL) == 0) {
+            Serial.println("closing file ");
             bmpFile.close();
             break;
         }
@@ -249,6 +292,7 @@ void bmpdraw(NetworkFile &f, int x, int y) {
       //tft.drawPixel(i, j, p);
       tft.pushColor(p);
     }
+    //Serial.println("\nend of line\n");
     ff = (bmpWidth * 3) & 3;
     if (ff) {
       buffidx -= ff;
@@ -256,8 +300,8 @@ void bmpdraw(NetworkFile &f, int x, int y) {
     }
     //Serial.println();
   }
-  //Serial.print(millis() - time, DEC);
-  //Serial.println(" ms");
+  Serial.print(millis() - time, DEC);
+  Serial.println(" ms");
 }
 
 boolean bmpReadHeader(NetworkFile &f) {
@@ -271,17 +315,17 @@ boolean bmpReadHeader(NetworkFile &f) {
  
   // read file size
   tmp = read32(f);  
-  //Serial.print("size 0x"); Serial.println(tmp, HEX);
+  Serial.print("size 0x"); Serial.println(tmp, HEX);
   
   // read and ignore creator bytes
   read32(f);
   
   bmpImageoffset = read32(f);  
-  //Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
+  Serial.print("offset "); Serial.println(bmpImageoffset, DEC);
   
   // read DIB header
   tmp = read32(f);
-  //Serial.print("header size "); Serial.println(tmp, DEC);
+  Serial.print("header size "); Serial.println(tmp, DEC);
   bmpWidth = read32(f);
   bmpHeight = read32(f);
   Serial.print(bmpWidth); Serial.print("x"); Serial.println(bmpHeight);
@@ -290,12 +334,12 @@ boolean bmpReadHeader(NetworkFile &f) {
     return false;
     
   bmpDepth = read16(f);
-  //Serial.print("bitdepth "); Serial.println(bmpDepth, DEC);
+  Serial.print("bitdepth "); Serial.println(bmpDepth, DEC);
 
   tmp = read32(f);
   if (tmp != 0) {
-    //Serial.print(tmp);
-    Serial.println("f4");
+    Serial.print(tmp);
+    Serial.println("compression");
     return false;
   }
   

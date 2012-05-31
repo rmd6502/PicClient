@@ -1,4 +1,4 @@
-#include <WiFly.h>
+#include <Ethernet.h>
 #include "NetworkFile.h"
 #include "NetUtil.h"
 
@@ -25,10 +25,10 @@ NetworkFile &NetworkFile::open(const char *server, const char *fileName, const u
   if (instance) {
     instance.close();
   }
-  static Client myClient(server, port);
+  static EthernetClient myClient;
   
   instance.client = &myClient; instance.offset = 0;
-  if (myClient.connect()) {
+  if (myClient.connect(server, port)) {
     //Serial.print("connected, filename "); Serial.println(fileName);
     myClient.print("GET "); myClient.print(fileName); myClient.println(" HTTP/1.0");
     myClient.println();
